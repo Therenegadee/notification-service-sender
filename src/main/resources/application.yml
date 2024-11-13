@@ -1,3 +1,16 @@
 spring:
   application:
     name: notification-sender
+
+integrations:
+  telegram:
+    url: "https://api.telegram.org/bot"
+    token: "7924821492:AAGUeZDRLawQbrEQUz4KEbYa7-9V1qOyzCI"
+  kafka:
+    cluster:
+      addresses: "localhost:29092,localhost:29093,localhost:29094"
+    telegram:
+      send:
+        topic: "send.telegram.notification"
+        error-topic: "error.send.telegram.notification"
+        group-id: "sender-send-telegram-notification"
