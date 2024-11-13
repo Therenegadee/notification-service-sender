@@ -1,3 +1,12 @@
 spring:
   application:
     name: notification-sender
+
+integrations:
+  telegram:
+    url: "https://api.telegram.org/bot"
+    token: "7924821492:AAGUeZDRLawQbrEQUz4KEbYa7-9V1qOyzCI"
+  kafka:
+    topics:
+      send:
+        telegram: "send.telegram.notification"
