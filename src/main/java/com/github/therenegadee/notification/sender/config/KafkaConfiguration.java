@@ -17,6 +17,8 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.support.converter.ByteArrayJsonMessageConverter;
+import org.springframework.kafka.support.converter.JsonMessageConverter;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
@@ -68,8 +70,11 @@ public class KafkaConfiguration {
         config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer.getClass());
-        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, EARLIEST);
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, EARLIEST.toString());
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        if (deserializer instanceof JsonDeserializer<T>) {
+            config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+        }
         return new DefaultKafkaConsumerFactory<>(config);
     }
 }

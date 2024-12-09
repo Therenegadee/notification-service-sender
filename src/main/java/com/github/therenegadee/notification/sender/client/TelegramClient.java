@@ -36,11 +36,11 @@ public class TelegramClient {
     }
 
     public SendTelegramNotificationResult sendNotification(SendTelegramNotificationRequest request) {
-        log.info("Начало отправки сообщения в Telegram чат (id: {}). Текст отправляемого сообщения: {}.",
-                request.getChatId(), request.getMessage());
+        log.info("Start sending the message in Telegram chat (id: {}). The message to sent: \"{}\".",
+                request.getRecipientContactValue(), request.getMessageBody());
         TelegramSendMessageRequest telegramRequest = TelegramSendMessageRequest.builder()
-                .chatId(request.getChatId())
-                .message(request.getMessage())
+                .chatId(request.getRecipientContactValue())
+                .message(request.getMessageBody())
                 .build();
         try {
             ResponseEntity<TelegramSendMessageResponse> telegramResponseEntity = telegramRestClient.post()
@@ -53,39 +53,43 @@ public class TelegramClient {
                     .toEntity(TelegramSendMessageResponse.class);
 
             TelegramSendMessageResponse telegramResponse = telegramResponseEntity.getBody();
-            if (Objects.isNull(telegramResponse)) {
-                log.error("Полученный результат отправки сообщения в Telegram чат (id: {}) был null!", request.getChatId());
+            if (!telegramResponseEntity.getStatusCode().is2xxSuccessful()) {
+                log.error("The result of sending the message in Telegram chat (id: {}) wasn't successful! HTTP Status: {}.",
+                        request.getRecipientContactValue(), telegramResponseEntity.getStatusCode());
+                if (Objects.nonNull(telegramResponse)) {
+                    log.error("Response body with error:\n{}.", telegramResponse);
+                }
                 return SendTelegramNotificationResult.builder()
                         .isNotificationSent(false)
                         .errorCode(TELEGRAM_API_ERROR_CODE)
-                        .errorMessage("Полученный результат отправки сообщения был null!")
+                        .errorMessage("Not successful result of sending of message in Telegram chat with id = " + request.getRecipientContactValue())
                         .build();
             }
-            log.info("Сообщение в Telegram чат (id: {}) было успешно отправлено!", request.getChatId());
+            log.info("The message was successfully sent in Telegram chat (id: {})!", request.getRecipientContactValue());
             return SendTelegramNotificationResult.builder()
-                    .isNotificationSent(telegramResponse.isSentSuccessfully())
+                    .isNotificationSent(true)
                     .build();
         } catch (RestClientResponseException rce) {
             TelegramSendMessageError errorResponse = Optional.ofNullable(rce.getResponseBodyAs(TelegramSendMessageError.class))
                     .orElseGet(() -> {
                         var errorResponseJsonBody = rce.getResponseBodyAsString(StandardCharsets.UTF_8);
-                        log.error("Не удалось десериализовать ответ с ошибкой от API Telegram. Raw Body: {}.",
+                        log.error("Couldn't deserialize the error response from API Telegram. Raw Body: {}.",
                                 errorResponseJsonBody);
                         return TelegramSendMessageError.builder()
                                 .errorCode(TELEGRAM_API_ERROR_CODE)
                                 .description("HTTP Code: " + rce.getStatusCode().value() + " .Raw Body [\n" + errorResponseJsonBody + "\n]")
                                 .build();
                     });
-            log.error("В ходе отправки сообщения в Telegram чат (id: {}) произошла ошибка при обмене данными по HTTP.\s" +
-                    "HTTP Статус полученной ошибки: {}. Сообщение об ошибке: {}.", request.getChatId(), rce.getStatusCode(), errorResponse.getDescription());
+            log.error("An HTTP error occurred while trying send the message in Telegram chat (id: {}). HTTP Status: {}." +
+                    "\sError message: {}.", request.getRecipientContactValue(), rce.getStatusCode(), errorResponse.getDescription());
             return SendTelegramNotificationResult.builder()
                     .isNotificationSent(false)
                     .errorCode(errorResponse.getErrorCode())
                     .errorMessage(errorResponse.getDescription())
                     .build();
         } catch (Exception e) {
-            log.error("В ходе отправки сообщения в Telegram чат (id: {}) произошла ошибка. Причина: {}.\nStackTrace: {}",
-                    request.getChatId(), ExceptionUtils.getMessage(e), ExceptionUtils.getStackTrace(e));
+            log.error("An error occurred while trying to send the message in Telegram chat (id: {}). Original Message: {}.\nStackTrace: {}",
+                    request.getRecipientContactValue(), ExceptionUtils.getMessage(e), ExceptionUtils.getStackTrace(e));
             return SendTelegramNotificationResult.builder()
                     .isNotificationSent(false)
                     .errorCode(INTERNAL_SENDER_ERROR_CODE)

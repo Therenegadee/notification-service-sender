@@ -33,20 +33,21 @@ public class TelegramSenderListener {
     }
 
     @KafkaListener(topics = "${integrations.kafka.telegram.send.topic}",
-            containerFactory = "sendTelegramNotificationListenerFactory")
+            containerFactory = "sendTelegramNotificationListenerFactory",
+            properties = {"spring.json.value.default.type=com.github.therenegadee.notification.sender.dto.SendTelegramNotificationRequest"})
     public void sendTelegramNotificationListener(@Payload SendTelegramNotificationRequest request,
                                                  Acknowledgment ack) {
         try {
-            log.info("Получен запрос на отправку уведомления в Telegram. ChatID = {}. Payload: {}.",
-                    request.getChatId(), request.getMessage());
+            log.info("Received request to send a Telegram notification. ChatID = {}. Payload: {}.",
+                    request.getRecipientContactValue(), request.getMessageBody());
             SendTelegramNotificationResult result = telegramClient.sendNotification(request);
             if (!result.isNotificationSent()) {
-                log.error("Уведомление для получателя с ChatID = \"{}\" не было отправлено. Причина: {}. Код ошибки: {}.",
-                        request.getChatId(), result.getErrorMessage(), result.getErrorCode());
-                log.info("Отправка информации в топик с неотправленными уведомлениями (\"{}\").", telegramSendNotificationErrorTopic);
+                log.error("Notification for the recipient with ChatID = \"{}\" was not sent. Reason: {}. Error code: {}.",
+                        request.getRecipientContactValue(), result.getErrorMessage(), result.getErrorCode());
+                log.info("Sending information to the topic with non-sent messages (topic: {}).", telegramSendNotificationErrorTopic);
                 SendTelegramNotificationError errorInfo = SendTelegramNotificationError.builder()
-                        .chatId(request.getChatId())
-                        .message(request.getMessage())
+                        .chatId(request.getRecipientContactValue())
+                        .message(request.getMessageBody())
                         .errorMessage(result.getErrorMessage())
                         .errorCode(result.getErrorCode())
                         .build();
@@ -54,17 +55,17 @@ public class TelegramSenderListener {
                         .whenComplete((sendResult, exception) -> {
                             if (Objects.isNull(exception)) {
                                 var metadata = sendResult.getRecordMetadata();
-                                log.info("Информация о неуспешной отправке уведомления в Telegram (ChatID: {}) было успешно отправлено в топик: {}." +
-                                                "Partition: {}. Offset: {}", request.getChatId(), telegramSendNotificationErrorTopic, metadata.partition(),
-                                        metadata.offset());
+                                log.info("Information about the failed Telegram notification send (ChatID: {}) was successfully" +
+                                                "\ssent to the topic: {}. Partition: {}. Offset: {}.", request.getRecipientContactValue(),
+                                        telegramSendNotificationErrorTopic, metadata.partition(), metadata.offset());
                             } else {
-                                log.error("Произошла ошибка при попытке отправки информации о неуспешной отправке уведомления в Telegram (ChatID: {})." +
-                                                "Причина: {}.\nStackTrace: {}", request.getChatId(), ExceptionUtils.getMessage(exception),
-                                        ExceptionUtils.getStackTrace(exception));
+                                log.error("An error occurred while trying to send information about the failed Telegram" +
+                                                "\snotification send (ChatID: {}). Original Message: {}.\nStackTrace: {}.",
+                                        request.getRecipientContactValue(), ExceptionUtils.getMessage(exception), ExceptionUtils.getStackTrace(exception));
                             }
                         });
             }
-            log.info("Уведомление в Telegram (получатель с ChatID = {}) было успешно отправлено!", request.getChatId());
+            log.info("Telegram notification (recipient with ChatID = {}) was successfully sent!", request.getRecipientContactValue());
         } finally {
             ack.acknowledge();
         }

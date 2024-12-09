@@ -8,7 +8,7 @@ integrations:
     token: "7924821492:AAGUeZDRLawQbrEQUz4KEbYa7-9V1qOyzCI"
   kafka:
     cluster:
-      addresses: "localhost:29092,localhost:29093,localhost:29094"
+      addresses: "localhost:9092,localhost:9093,localhost:9094"
     telegram:
       send:
         topic: "send.telegram.notification"

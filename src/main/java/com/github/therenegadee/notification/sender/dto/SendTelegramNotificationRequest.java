@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SendTelegramNotificationRequest {
-    private String chatId;
-    private String message;
+    private String recipientContactValue;
+    private String messageBody;
 }
