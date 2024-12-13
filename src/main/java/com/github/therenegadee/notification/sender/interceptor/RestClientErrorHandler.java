@@ -24,16 +24,16 @@ public class RestClientErrorHandler implements ResponseErrorHandler {
     public void handleError(ClientHttpResponse httpResponse) throws IOException {
         HttpStatusCode statusCode = httpResponse.getStatusCode();
         if (statusCode.is5xxServerError()) {
-            log.warn("Произошла ошибка на стороне вызываемоего сервиса. Код ошибки: {}.",
+            log.warn("Error occurred on the side of requested API. HTTP Status: {}.",
                     statusCode);
             switch ((HttpStatus) statusCode) {
                 case INTERNAL_SERVER_ERROR -> throw new IntegrationException(
-                        "Произошла ошибка на стороне вызываемого сервиса.");
+                        "Error occurred on the side of requested API.");
                 default -> throw new HttpClientErrorException(httpResponse.getStatusCode());
             }
         } else if (httpResponse.getStatusCode().is4xxClientError()) {
-            log.warn("Произошла ошибка в ходе выполнения запроса вызываемым сервисом из-за некорректного параметра\s" +
-                    "или отсутствия доступа к ресурсу. Код ошибки: {}.", statusCode);
+            log.warn("An error occurred while processing the request by the called service due to an incorrect parameter\s" +
+                    "or lack of access to the resource. HTTP status: {}.", statusCode);
             switch ((HttpStatus) statusCode) {
                 case BAD_REQUEST -> throw new BadRequestException(httpResponse.getStatusText());
                 case NOT_FOUND -> throw new NotFoundException(httpResponse.getStatusText());
